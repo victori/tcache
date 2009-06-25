@@ -1,0 +1,28 @@
+
+TCache
+======
+
+TCache is a caching abstraction that unifies multiple cache implementations 
+under a single API. 
+
+TCache currently supports EHCache, Memcache and a generic DB cache (Postgresql,Mysql). 
+
+Features
+--------
+
+TCache is:
+
+- simple
+
+  Simplicity is key, multiple cache implementations, one API.
+  
+Build
+-----
+
+TCache requires java 5 and ant 1.7.
+
+Building from source is easy:
+
+    $ ant jar
+
+Victor Igumnov <victori@fabulously40.com>
