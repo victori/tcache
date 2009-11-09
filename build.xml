@@ -63,8 +63,8 @@
       <fileset dir="${src.dir}">
         <include name="**/*"/>
       </fileset>
-      <zipfileset src="libs/ehcache-1.6.0-beta5.jar"/>
-      <zipfileset src="libs/memcached-2.3.1.jar"/>
+      <zipfileset src="libs/ehcache-1.6.1.jar"/>
+      <zipfileset src="libs/memcached-2.4.2.jar"/>
       <zipfileset src="libs/memcached-trunk.jar"/>
       <zipfileset src="libs/spy-2.4.jar"/>
       <fileset dir="${src.dir}" includes="*.*" />

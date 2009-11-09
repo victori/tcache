@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -33,10 +34,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class Memcache2 implements ICache, ICacheStat, IDistributedCache, ISupportAsyncOperations {
-	private MemcachedClient client;
 	private String poolName;
 	private Set<String> keys = new HashSet<String>();
 	private static transient Logger logger = LoggerFactory.getLogger(Memcache2.class);
+	private List<MemcachedClient> memPool = new ArrayList<MemcachedClient>();
+	private Random rand = new Random();
+
+	protected int getPoolSize() {
+		return 3;
+	}
+
+	// this was needed to get around spymemcached's job queue for high load requirements.
+	protected MemcachedClient getClient() {
+		return memPool.get(rand.nextInt(memPool.size()));
+	}
 
 	public Memcache2(final List<String> servers, final String poolName) {
 		StringBuffer sb = new StringBuffer();
@@ -45,7 +56,9 @@ public class Memcache2 implements ICache, ICacheStat, IDistributedCache, ISuppor
 		}
 		this.poolName = poolName;
 		try {
-			client = new MemcachedClient(new KetamaConnectionFactory(), AddrUtil.getAddresses(sb.toString()));
+			for(int i = 0;i < getPoolSize() ;i++) {
+				memPool.add(new MemcachedClient(new KetamaConnectionFactory(), AddrUtil.getAddresses(sb.toString())));
+			}
 			//client.setTranscoder(new SerializingTranscoder());
 			//Logger.getLogger(SerializingTranscoder.class.getName()).setLevel(Level.WARNING);
 			//client.setTranscoder(new WhalinTranscoder());
@@ -54,17 +67,13 @@ public class Memcache2 implements ICache, ICacheStat, IDistributedCache, ISuppor
 		}
 	}
 
-	public MemcachedClient getClient() {
-		return client;
-	}
-
 	public void put(final String key, final Object value, final int ttl) {
 		retryDo(new IDo() {
 			private static final long serialVersionUID = 1L;
 
 			public Object execute() {
 				if (value != null) {
-					client.set(genKey(key), ttl, value);
+					getClient().set(genKey(key), ttl, value);
 					if (!keys.contains(key)) {
 						keys.add(key);
 					}
@@ -87,7 +96,7 @@ public class Memcache2 implements ICache, ICacheStat, IDistributedCache, ISuppor
 			private static final long serialVersionUID = 1L;
 
 			public Object execute() {
-				client.flush();
+				getClient().flush();
 				keys.clear();
 				return null;
 			}
@@ -122,7 +131,7 @@ public class Memcache2 implements ICache, ICacheStat, IDistributedCache, ISuppor
 
 			public Object execute() {
 				try {
-					Future<Object> f = client.asyncGet(genKey(key));
+					Future<Object> f = getClient().asyncGet(genKey(key));
 					Object ret = f.get(2000, TimeUnit.MILLISECONDS);
 					if (ret != null) {
 						if (!keys.contains(key)) {
@@ -148,7 +157,7 @@ public class Memcache2 implements ICache, ICacheStat, IDistributedCache, ISuppor
 			private static final long serialVersionUID = 1L;
 
 			public Object execute() {
-				client.delete(genKey(key));
+				getClient().delete(genKey(key));
 				keys.remove(key);
 				return null;
 			}
@@ -166,7 +175,7 @@ public class Memcache2 implements ICache, ICacheStat, IDistributedCache, ISuppor
 
 			@SuppressWarnings("unchecked")
 			public Object execute() {
-				for (Map.Entry element : client.getStats().entrySet()) {
+				for (Map.Entry element : getClient().getStats().entrySet()) {
 					Map.Entry entry = element;
 					Map<String, String> val = (Map<String, String>) entry.getValue();
 					return val.get(key);
@@ -209,7 +218,7 @@ public class Memcache2 implements ICache, ICacheStat, IDistributedCache, ISuppor
 	}
 
 	public void disconnect() {
-		client.shutdown();
+		getClient().shutdown();
 	}
 
 	public String getPoolName() {
