@@ -117,7 +117,8 @@ public class Ehcache implements ICache, ICacheStat {
 	public Object get(final String key) {
 		Element el = getCache().get(key);
 		if (el != null) {
-			return el.getValue();
+			return el.getObjectValue();
+			//return el.getValue();
 		} else {
 			return null;
 		}

@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
 public class CacheLayer {
 	private static transient Logger logger = LoggerFactory.getLogger(CacheLayer.class);
 
-	public static Object addOrReplace(final ICache cache, final String key, final IFetch fetch, final int ttl) {
+	public synchronized static Object addOrReplace(final ICache cache, final String key, final IFetch fetch, final int ttl) {
 		// if cache is null, just return the result.
 		if (cache == null) {
 			return fetch.getObject();
@@ -46,23 +46,23 @@ public class CacheLayer {
 		}
 	}
 
-	public static Object get(final ICache cache, final String key) {
+	public synchronized static Object get(final ICache cache, final String key) {
 		return cache.get(key);
 	}
 
-	public static void add(final ICache cache, final String key, final Object value, final int ttl) {
+	public synchronized static void add(final ICache cache, final String key, final Object value, final int ttl) {
 		cache.put(key, value, ttl);
 	}
 
-	public static void add(final ICache cache, final String key, final Object value) {
+	public synchronized static void add(final ICache cache, final String key, final Object value) {
 		cache.put(key, value, 0);
 	}
 
-	public static void flush(final ICache cache) {
+	public synchronized static void flush(final ICache cache) {
 		cache.clear();
 	}
 
-	public static void remove(final ICache cache, final String key) {
+	public synchronized static void remove(final ICache cache, final String key) {
 		cache.remove(key);
 	}
 
