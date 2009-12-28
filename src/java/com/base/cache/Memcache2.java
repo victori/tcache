@@ -23,8 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.KetamaConnectionFactory;
@@ -131,8 +129,9 @@ public class Memcache2 implements ICache, ICacheStat, IDistributedCache, ISuppor
 
 			public Object execute() {
 				try {
-					Future<Object> f = getClient().asyncGet(genKey(key));
-					Object ret = f.get(2000, TimeUnit.MILLISECONDS);
+					//Future<Object> f = getClient().asyncGet(genKey(key));
+					//Object ret = f.get(2000, TimeUnit.MILLISECONDS);
+					Object ret = getClient().get(genKey(key));
 					if (ret != null) {
 						if (!keys.contains(key)) {
 							keys.add(key);
