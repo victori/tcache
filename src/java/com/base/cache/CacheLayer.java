@@ -16,6 +16,10 @@
 
 package com.base.cache;
 
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,6 +27,7 @@ public class CacheLayer {
 	private static transient Logger logger = LoggerFactory.getLogger(CacheLayer.class);
 	private static String DOGPILE_PREFIX = "dp-";
 	private static String DOGPILE_FETCH_PROGRESS_PREFIX = "fdp-";
+	private static transient ThreadPoolExecutor exec = new ThreadPoolExecutor(5, 50, 10, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
 
 	public synchronized static Object addOrReplace(final ICache cache, final String key, final IFetch fetch, final int ttl) {
 		return addOrReplace(cache,key,fetch,ttl,0);
@@ -40,32 +45,15 @@ public class CacheLayer {
 			if (o != null) {
 
 				if(dogPileMultiplier != 0) {
-
 					logger.debug("Stale cache check.");
-					if(cache.get(DOGPILE_PREFIX+key) == null && cache.get(DOGPILE_FETCH_PROGRESS_PREFIX+key) == null) {
+					Object ret = cache.get(DOGPILE_PREFIX+key);
+					if(ret == null && cache.get(DOGPILE_FETCH_PROGRESS_PREFIX+key) == null) {
 						// give a 2 minute timeout for fetch purposes.
 						cache.put(DOGPILE_FETCH_PROGRESS_PREFIX+key, true, 120);
 						logger.debug("Cache stale, fetching new data.");
-						// Yes go willy nilly with threads, we don't want the cache stalling in queue.
-						// Hope your OS handles threading well ;-)
-						new Thread(new CacheFetchWorker(cache, fetch, key, ttl, dogPileMultiplier)).start();
-					} else {
-						logger.debug("Content still valid.");
+						exec.execute(new CacheFetchWorker(cache, fetch, key, ttl, dogPileMultiplier));
 					}
-
-					if(cache.get(DOGPILE_PREFIX+key) == null) {
-						logger.debug("Returning stale cache.");
-
-						if(cache.get(DOGPILE_FETCH_PROGRESS_PREFIX+key) == null) {
-							logger.debug("Timeout hit, clearing cache.");
-							cache.remove(key);
-							cache.remove(DOGPILE_PREFIX+key);
-							cache.remove(DOGPILE_FETCH_PROGRESS_PREFIX+key);
-						}
-
-					} else {
-						logger.debug("Returning fresh cache.");
-					}
+					logger.debug(ret == null ? "Returning stale cache." : "Returning fresh cache." );
 				}
 
 				return o;
@@ -75,6 +63,7 @@ public class CacheLayer {
 				if(dogPileMultiplier != 0) {
 					cache.put(key, val, ttl*dogPileMultiplier);
 					cache.put(DOGPILE_PREFIX+key,true,ttl);
+					// If there is any.
 					cache.remove(DOGPILE_FETCH_PROGRESS_PREFIX+key);
 				} else {
 					cache.put(key, val, ttl);
