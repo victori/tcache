@@ -16,9 +16,6 @@
 
 package com.base.cache;
 
-import java.util.Calendar;
-import java.util.Date;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,52 +40,23 @@ public class CacheLayer {
 			if (o != null) {
 
 				if(dogPileMultiplier != 0) {
+
 					logger.debug("Stale cache check.");
 					if(cache.get(DOGPILE_PREFIX+key) == null && cache.get(DOGPILE_FETCH_PROGRESS_PREFIX+key) == null) {
-						// Add 2 minutes ahead for a timeout.
-						Calendar cal = Calendar.getInstance();
-						cal.setTime(new Date());
-						cal.add(Calendar.SECOND, 120);
-
-						cache.put(DOGPILE_FETCH_PROGRESS_PREFIX+key, cal.getTime());
+						// give a 2 minute timeout for fetch purposes.
+						cache.put(DOGPILE_FETCH_PROGRESS_PREFIX+key, true, 120);
 						logger.debug("Cache stale, fetching new data.");
-						new Thread() {
-							@Override
-							public void run() {
-								Object val = null;
-								if(fetch instanceof IAsyncFetch) {
-									try {
-										val = ((IAsyncFetch)fetch).getObjectAsync();
-									} catch (Exception e) {
-										// sometimes we fail ;-(
-									}
-								} else {
-									val = fetch.getObject();
-								}
-								if(val == null) {
-									logger.debug("Failed to get new data, clearing stale cache.");
-									cache.remove(key);
-									cache.remove(DOGPILE_PREFIX+key);
-									cache.remove(DOGPILE_FETCH_PROGRESS_PREFIX+key);
-								} else {
-									cache.put(key, val, ttl*dogPileMultiplier);
-									cache.put(DOGPILE_PREFIX+key,true,ttl);
-									cache.remove(DOGPILE_FETCH_PROGRESS_PREFIX+key);
-									logger.debug("Cache primed.");
-								}
-							};
-						}.start();
+						// Yes go willy nilly with threads, we don't want the cache stalling in queue.
+						// Hope your OS handles threading well ;-)
+						new Thread(new CacheFetchWorker(cache, fetch, key, ttl, dogPileMultiplier)).start();
 					} else {
 						logger.debug("Content still valid.");
 					}
-				}
 
-				if(dogPileMultiplier != 0) {
 					if(cache.get(DOGPILE_PREFIX+key) == null) {
 						logger.debug("Returning stale cache.");
 
-						Date timeout = (Date) cache.get(DOGPILE_FETCH_PROGRESS_PREFIX+key);
-						if(timeout != null && new Date().after(timeout)) {
+						if(cache.get(DOGPILE_FETCH_PROGRESS_PREFIX+key) == null) {
 							logger.debug("Timeout hit, clearing cache.");
 							cache.remove(key);
 							cache.remove(DOGPILE_PREFIX+key);
@@ -99,6 +67,7 @@ public class CacheLayer {
 						logger.debug("Returning fresh cache.");
 					}
 				}
+
 				return o;
 			} else {
 				Object val = fetch.getObject();
@@ -140,6 +109,46 @@ public class CacheLayer {
 
 	public synchronized static void remove(final ICache cache, final String key) {
 		cache.remove(key);
+	}
+
+	public static class CacheFetchWorker implements Runnable {
+		private IFetch fetch;
+		private String key;
+		private ICache cache;
+		private int ttl;
+		private int dogPileMultiplier;
+
+		public CacheFetchWorker(final ICache cache,final IFetch fetch,final String key,final int ttl,final int dogPileMultiplier) {
+			this.fetch = fetch;
+			this.key = key;
+			this.cache = cache;
+			this.ttl = ttl;
+			this.dogPileMultiplier = dogPileMultiplier;
+		}
+
+		public void run() {
+			Object val = null;
+			if(fetch instanceof IAsyncFetch) {
+				try {
+					val = ((IAsyncFetch)fetch).getObjectAsync();
+				} catch (Exception e) {
+					// sometimes we fail ;-(
+				}
+			} else {
+				val = fetch.getObject();
+			}
+			if(val == null) {
+				logger.debug("Failed to get new data, clearing stale cache.");
+				cache.remove(key);
+				cache.remove(DOGPILE_PREFIX+key);
+				cache.remove(DOGPILE_FETCH_PROGRESS_PREFIX+key);
+			} else {
+				cache.put(key, val, ttl*dogPileMultiplier);
+				cache.put(DOGPILE_PREFIX+key,true,ttl);
+				cache.remove(DOGPILE_FETCH_PROGRESS_PREFIX+key);
+				logger.debug("Cache primed.");
+			}
+		}
 	}
 
 }
