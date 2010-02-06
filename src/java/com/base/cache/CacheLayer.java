@@ -29,11 +29,11 @@ public class CacheLayer {
 	private static String DOGPILE_FETCH_PROGRESS_PREFIX = "fdp-";
 	private static transient ThreadPoolExecutor exec = new ThreadPoolExecutor(5, 50, 10, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
 
-	public synchronized static Object addOrReplace(final ICache cache, final String key, final IFetch fetch, final int ttl) {
+	public static Object addOrReplace(final ICache cache, final String key, final IFetch fetch, final int ttl) {
 		return addOrReplace(cache,key,fetch,ttl,0);
 	}
 
-	public synchronized static Object addOrReplace(final ICache cache, final String key, final IFetch fetch, final int ttl,final int dogPileMultiplier) {
+	public static Object addOrReplace(final ICache cache, final String key, final IFetch fetch, final int ttl,final int dogPileMultiplier) {
 		// if cache is null, just return the result.
 		if (cache == null) {
 			return fetch.getObject();
@@ -80,23 +80,23 @@ public class CacheLayer {
 		}
 	}
 
-	public synchronized static Object get(final ICache cache, final String key) {
+	public static Object get(final ICache cache, final String key) {
 		return cache.get(key);
 	}
 
-	public synchronized static void add(final ICache cache, final String key, final Object value, final int ttl) {
+	public static void add(final ICache cache, final String key, final Object value, final int ttl) {
 		cache.put(key, value, ttl);
 	}
 
-	public synchronized static void add(final ICache cache, final String key, final Object value) {
+	public static void add(final ICache cache, final String key, final Object value) {
 		cache.put(key, value, 0);
 	}
 
-	public synchronized static void flush(final ICache cache) {
+	public static void flush(final ICache cache) {
 		cache.clear();
 	}
 
-	public synchronized static void remove(final ICache cache, final String key) {
+	public static void remove(final ICache cache, final String key) {
 		cache.remove(key);
 	}
 
