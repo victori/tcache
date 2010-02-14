@@ -77,6 +77,29 @@
     </jar>
   </target>
 
+   <target name="contrib" depends="compile" description="o Creates a JAR file for this package">
+    <mkdir dir="${build.dir.classes}" />
+    <manifestclasspath property="dist.manifest.classpath" jarfile="contrib-cache.jar">
+      <classpath refid="project.classpath" />
+    </manifestclasspath>
+
+    <jar destfile="contrib-cache.jar"
+      excludes="**/package.html" basedir="${build.dir}/classes" includes="**/*.class"
+      >
+      <fileset dir="${src.dir}">
+        <include name="**/*"/>
+      </fileset>
+      <zipfileset src="libs/ehcache-core-1.7.2.jar"/>
+      <zipfileset src="libs/memcached-2.5rc1.jar"/>
+      <zipfileset src="libs/memcached-trunk.jar"/>
+      <zipfileset src="libs/spy-2.4.jar"/>
+      <fileset dir="${src.dir}" includes="*.*" />
+      <manifest>
+        <attribute name="Class-Path" value="${dist.manifest.classpath}"/>
+      </manifest>
+    </jar>
+  </target>
+
   <target name="clean" description="o Cleans up the build artifacts">
     <delete dir="${build.dir}" failonerror="false" />
     <delete file="tcache.jar" failonerror="false" />

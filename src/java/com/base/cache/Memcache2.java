@@ -16,22 +16,16 @@
 
 package com.base.cache;
 
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.KetamaConnectionFactory;
 import net.spy.memcached.MemcachedClient;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.Serializable;
+import java.util.*;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 public class Memcache2 implements ICache, ICacheStat, IDistributedCache, ISupportAsyncOperations {
 	private String poolName;
@@ -41,12 +35,16 @@ public class Memcache2 implements ICache, ICacheStat, IDistributedCache, ISuppor
 	private Random rand = new Random();
 
 	protected int getPoolSize() {
-		return 3;
+		return 1;
 	}
 
 	// this was needed to get around spymemcached's job queue for high load requirements.
 	protected MemcachedClient getClient() {
-		return memPool.get(rand.nextInt(memPool.size()));
+        if(getPoolSize() == 1) {
+            return memPool.get(0);
+        } else {
+		    return memPool.get(rand.nextInt(memPool.size()));
+        }
 	}
 
 	public Memcache2(final List<String> servers, final String poolName) {
