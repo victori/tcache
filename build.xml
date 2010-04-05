@@ -89,7 +89,7 @@
       <fileset dir="${src.dir}">
         <include name="**/*"/>
       </fileset>
-      <zipfileset src="libs/ehcache-core-1.7.2.jar"/>
+      <zipfileset src="libs/ehcache-core-2.0.0.jar"/>
       <zipfileset src="libs/memcached-2.5rc1.jar"/>
       <zipfileset src="libs/memcached-trunk.jar"/>
       <zipfileset src="libs/spy-2.4.jar"/>
