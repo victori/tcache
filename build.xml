@@ -64,11 +64,8 @@
         <include name="**/*"/>
       </fileset>
       <zipfileset src="libs/ehcache-core-2.0.0.jar"/>
-      <zipfileset src="libs/junit-4.1.jar"/>
-      <zipfileset src="libs/memcached-2.5rc1.jar"/>
+      <zipfileset src="libs/memcached-2.5rc3.jar"/>
       <zipfileset src="libs/memcached-trunk.jar"/>
-      <zipfileset src="libs/slf4j-api-1.4.3.jar"/>
-      <zipfileset src="libs/slf4j-jdk14-1.4.3.jar"/>
       <zipfileset src="libs/spy-2.4.jar"/>
       <fileset dir="${src.dir}" includes="*.*" />
       <manifest>
@@ -90,7 +87,7 @@
         <include name="**/*"/>
       </fileset>
       <zipfileset src="libs/ehcache-core-2.0.0.jar"/>
-      <zipfileset src="libs/memcached-2.5rc1.jar"/>
+      <zipfileset src="libs/memcached-2.5rc3.jar"/>
       <zipfileset src="libs/memcached-trunk.jar"/>
       <zipfileset src="libs/spy-2.4.jar"/>
       <fileset dir="${src.dir}" includes="*.*" />
