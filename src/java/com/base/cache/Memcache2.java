@@ -24,12 +24,13 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 public class Memcache2 implements ICache, ICacheStat, IDistributedCache, ISupportAsyncOperations {
 	private String poolName;
-	private Set<String> keys = new HashSet<String>();
+	private Map<String,Object> keys = new ConcurrentHashMap<String,Object>();
 	private static transient Logger logger = LoggerFactory.getLogger(Memcache2.class);
 	private List<MemcachedClient> memPool = new ArrayList<MemcachedClient>();
 	private Random rand = new Random();
@@ -72,8 +73,8 @@ public class Memcache2 implements ICache, ICacheStat, IDistributedCache, ISuppor
 			public Object execute() {
 				if (value != null) {
 					getClient().set(genKey(key), ttl, value);
-					if (!keys.contains(key)) {
-						keys.add(key);
+					if (!keys.containsKey(key)) {
+						keys.put(key,"item");
 					}
 				}
 				return null;
@@ -133,8 +134,8 @@ public class Memcache2 implements ICache, ICacheStat, IDistributedCache, ISuppor
 					Object ret = f.get(2000, TimeUnit.MILLISECONDS);
 					//Object ret = getClient().get(genKey(key));
 					if (ret != null) {
-						if (!keys.contains(key)) {
-							keys.add(key);
+						if (!keys.containsKey(key)) {
+							keys.put(key,"item");
 						}
 					}
 					return ret;
@@ -148,7 +149,7 @@ public class Memcache2 implements ICache, ICacheStat, IDistributedCache, ISuppor
 	}
 
 	public List<String> getKeys() {
-		return new ArrayList<String>(keys);
+		return new ArrayList<String>(keys.keySet());
 	}
 
 	public void remove(final String key) {

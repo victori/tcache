@@ -16,27 +16,23 @@
 
 package com.base.cache;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Map.Entry;
-
 import com.meetup.memcached.Logger;
 import com.meetup.memcached.MemcachedClient;
 import com.meetup.memcached.SockIOPool;
 
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+
 public class Memcache implements ICache, ICacheStat, IDistributedCache {
 	private transient MemcachedClient client;
 	private String poolName;
-	private Set<String> keys = new HashSet<String>();
+	private Map<String,Object> keys = new ConcurrentHashMap<String,Object>();
 
 	public void put(final String key, final Object value) {
 		client.set(genKey(key), value);
-		if (!keys.contains(key)) {
-			keys.add(key);
+		if (!keys.containsKey(key)) {
+			keys.put(key,"item");
 		}
 	}
 
@@ -83,8 +79,8 @@ public class Memcache implements ICache, ICacheStat, IDistributedCache {
 	public Object get(final String key) {
 		Object ret = client.get(genKey(key));
 		if (ret != null) {
-			if (!keys.contains(key)) {
-				keys.add(key);
+			if (!keys.containsKey(key)) {
+				keys.put(key, "item");
 			}
 		}
 		return ret;
@@ -138,7 +134,7 @@ public class Memcache implements ICache, ICacheStat, IDistributedCache {
 	}
 
 	public List<String> getKeys() {
-		return new ArrayList<String>(keys);
+		return new ArrayList<String>(keys.keySet());
 	}
 
 	public void clear() {
@@ -148,15 +144,15 @@ public class Memcache implements ICache, ICacheStat, IDistributedCache {
 
 	public void remove(final String key) {
 		client.delete(genKey(key));
-		if (keys.contains(key)) {
+		if (keys.containsKey(key)) {
 			keys.remove(key);
 		}
 	}
 
 	public void put(final String key, final Object value, final int ttl) {
 		client.set(genKey(key), value);
-		if (!keys.contains(key)) {
-			keys.add(key);
+		if (!keys.containsKey(key)) {
+			keys.put(key, "item");
 		}
 	}
 
