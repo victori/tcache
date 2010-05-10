@@ -64,7 +64,7 @@
         <include name="**/*"/>
       </fileset>
       <zipfileset src="libs/ehcache-core-2.0.0.jar"/>
-      <zipfileset src="libs/memcached-2.5rc3.jar"/>
+      <zipfileset src="libs/memcached-2.5.jar"/>
       <zipfileset src="libs/memcached-trunk.jar"/>
       <zipfileset src="libs/spy-2.4.jar"/>
       <fileset dir="${src.dir}" includes="*.*" />
@@ -87,7 +87,7 @@
         <include name="**/*"/>
       </fileset>
       <zipfileset src="libs/ehcache-core-2.0.0.jar"/>
-      <zipfileset src="libs/memcached-2.5rc3.jar"/>
+      <zipfileset src="libs/memcached-2.5.jar"/>
       <zipfileset src="libs/memcached-trunk.jar"/>
       <zipfileset src="libs/spy-2.4.jar"/>
       <fileset dir="${src.dir}" includes="*.*" />
