@@ -16,12 +16,12 @@
 
 package com.base.cache;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class CacheLayer {
 	private static transient Logger logger = LoggerFactory.getLogger(CacheLayer.class);
@@ -32,6 +32,13 @@ public class CacheLayer {
 	public static Object addOrReplace(final ICache cache, final String key, final IFetch fetch, final int ttl) {
 		return addOrReplace(cache,key,fetch,ttl,0);
 	}
+
+    protected static String getDpKey(String key) {
+        return DOGPILE_PREFIX+key;
+    }
+    protected static String getDpProgressKey(String key) {
+        return DOGPILE_FETCH_PROGRESS_PREFIX + key;
+    }
 
 	public static Object addOrReplace(final ICache cache, final String key, final IFetch fetch, final int ttl,final int dogPileMultiplier) {
 		// if cache is null, just return the result.
@@ -45,15 +52,19 @@ public class CacheLayer {
 			if (o != null) {
 
 				if(dogPileMultiplier != 0) {
-					logger.debug("Stale cache check.");
-					Object ret = cache.get(DOGPILE_PREFIX+key);
-					if(ret == null && cache.get(DOGPILE_FETCH_PROGRESS_PREFIX+key) == null) {
+                    if(logger.isDebugEnabled()) {
+					    logger.debug("Stale cache check. for key "+ getDpKey(key));
+                    }
+					Object ret = cache.get(getDpKey(key));
+					if(ret == null && cache.get(getDpProgressKey(key)) == null) {
 						// give a 2 minute timeout for fetch purposes.
-						cache.put(DOGPILE_FETCH_PROGRESS_PREFIX+key, true, 120);
+						cache.put(getDpProgressKey(key), true, 120);
 						logger.debug("Cache stale, fetching new data.");
 						exec.execute(new CacheFetchWorker(cache, fetch, key, ttl, dogPileMultiplier));
 					}
-					logger.debug(ret == null ? "Returning stale cache." : "Returning fresh cache." );
+                    if(logger.isDebugEnabled()) {
+					    logger.debug(ret == null ? "Returning stale cache." : "Returning fresh cache." );
+                    }
 				}
 
 				return o;
@@ -62,9 +73,9 @@ public class CacheLayer {
 
 				if(dogPileMultiplier != 0) {
 					cache.put(key, val, ttl*dogPileMultiplier);
-					cache.put(DOGPILE_PREFIX+key,true,ttl);
+					cache.put(getDpKey(key),true,ttl);
 					// If there is any.
-					cache.remove(DOGPILE_FETCH_PROGRESS_PREFIX+key);
+					cache.remove(getDpProgressKey(key));
 				} else {
 					cache.put(key, val, ttl);
 				}
@@ -129,12 +140,12 @@ public class CacheLayer {
 			if(val == null) {
 				logger.debug("Failed to get new data, clearing stale cache.");
 				cache.remove(key);
-				cache.remove(DOGPILE_PREFIX+key);
-				cache.remove(DOGPILE_FETCH_PROGRESS_PREFIX+key);
+				cache.remove(getDpKey(key));
+				cache.remove(getDpProgressKey(key));
 			} else {
 				cache.put(key, val, ttl*dogPileMultiplier);
-				cache.put(DOGPILE_PREFIX+key,true,ttl);
-				cache.remove(DOGPILE_FETCH_PROGRESS_PREFIX+key);
+				cache.put(getDpKey(key),true,ttl);
+				cache.remove(getDpProgressKey(key));
 				logger.debug("Cache primed.");
 			}
 		}
