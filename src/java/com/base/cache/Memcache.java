@@ -28,6 +28,42 @@ public class Memcache implements ICache, ICacheStat, IDistributedCache {
 	private transient MemcachedClient client;
 	private String poolName;
 	private Map<String,Object> keys = new ConcurrentHashMap<String,Object>();
+    private boolean prefixedKeys;
+    private String prefix;
+    private Random rand;
+
+    public Memcache(final List<String> servers, final String poolName) {
+        this(servers,poolName,false);
+    }
+
+    public Memcache(final List<String> servers, final String poolName, boolean prefixedKeys) {
+        this.keys = new ConcurrentHashMap<String, Object>();
+        this.poolName = poolName;
+        this.prefixedKeys = prefixedKeys;
+        this.prefix = poolName + "_ns";
+        this.rand = new Random(System.currentTimeMillis());
+        
+        SockIOPool pool = SockIOPool.getInstance(poolName);
+        String[] serv = new String[servers.size()];
+        for (int i = 0; i < serv.length; i++) {
+            serv[i] = servers.get(i);
+        }
+        pool.setServers(serv);
+        // pool.setNagle(false);
+        pool.setInitConn(5);
+        pool.setMinConn(5);
+        // default to 6 hours
+        pool.setMaxIdle(1000 * 60 * 60 * 6);
+        pool.setHashingAlg(SockIOPool.NEW_COMPAT_HASH);
+        pool.setFailover(true);
+
+        pool.initialize();
+        client = new MemcachedClient(poolName);
+        client.setPrimitiveAsString(false);
+        client.setCompressEnable(true);
+        client.setSanitizeKeys(true);
+        Logger.getLogger(MemcachedClient.class.getName()).setLevel(Logger.LEVEL_WARN);
+    }
 
 	public void put(final String key, final Object value) {
 		client.set(genKey(key), value);
@@ -37,10 +73,22 @@ public class Memcache implements ICache, ICacheStat, IDistributedCache {
 	}
 
 	protected String genKey(final String key) {
-		return getPoolName() + "#" + key.replace(" ", "").replace("&", "").replace("!", "").replace(":", "#");
+        String prefix = (prefixedKeys) ? getPoolName() + "#" + getPrefixKey() : getPoolName();
+        return prefix + "#" + key.replace(" ", "").replace("&", "").replace("!", "").replace(":", "#");
 	}
 
-	public void setCompression(final boolean bool) {
+    protected String resetPrefixKey() {
+        String nsKey = String.valueOf(rand.nextInt());
+        client.set(prefix, nsKey);
+        return nsKey;
+    }
+
+    protected String getPrefixKey() {
+        Object nsKey = client.get(prefix);
+        return nsKey == null ? resetPrefixKey() : String.valueOf(nsKey);
+    }
+
+    public void setCompression(final boolean bool) {
 		client.setCompressEnable(bool);
 	}
 
@@ -52,29 +100,6 @@ public class Memcache implements ICache, ICacheStat, IDistributedCache {
 		return client;
 	}
 
-	public Memcache(final List<String> servers, final String poolName) {
-		SockIOPool pool = SockIOPool.getInstance(poolName);
-		this.poolName = poolName;
-		String[] serv = new String[servers.size()];
-		for (int i = 0; i < serv.length; i++) {
-			serv[i] = servers.get(i);
-		}
-		pool.setServers(serv);
-		// pool.setNagle(false);
-		pool.setInitConn(5);
-		pool.setMinConn(5);
-		// default to 6 hours
-		pool.setMaxIdle(1000 * 60 * 60 * 6);
-		pool.setHashingAlg(SockIOPool.NEW_COMPAT_HASH);
-		pool.setFailover(true);
-
-		pool.initialize();
-		client = new MemcachedClient(poolName);
-		client.setPrimitiveAsString(false);
-		client.setCompressEnable(true);
-		client.setSanitizeKeys(true);
-		Logger.getLogger(MemcachedClient.class.getName()).setLevel(Logger.LEVEL_WARN);
-	}
 
 	public Object get(final String key) {
 		Object ret = client.get(genKey(key));
@@ -138,7 +163,11 @@ public class Memcache implements ICache, ICacheStat, IDistributedCache {
 	}
 
 	public void clear() {
-		client.flushAll();
+        if (prefixedKeys) {
+            resetPrefixKey();
+        } else {
+            client.flushAll();
+        }
 		keys.clear();
 	}
 
